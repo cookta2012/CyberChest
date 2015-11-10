@@ -21,10 +21,14 @@ cyber_beacon_50 =
     flags = {},
     max_health = 0,
     corpse = "small-remnants",
-    dying_explosion = "huge-explosion",
+    dying_explosion = "medium-explosion",
     collision_box = {{-0.2, -0.2}, {0.2, 0.2}},
     selection_box = {{-0.2, -0.2}, {0.2, 0.2}},
     allowed_effects = {"consumption", "speed", "pollution"},
+	    module_specification =
+    {
+      module_slots = 2
+    },
     base_picture =
     {
       filename = "__CyberChest__/graphics/empty.png",
@@ -133,6 +137,7 @@ data:extend(
 				height = 100,
 				shift = {0.35, 0.05},
 			},
+			circuit_wire_max_distance = 7.5
 		}
 	}
 )
