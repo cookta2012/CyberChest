@@ -72,7 +72,8 @@ cyberchest.autoreset = true
 cyberchest.reserve_slots = true
 cyberchest.collect_from_ground = true
 cyberchest.ignore_errors = false
-cyberchest.autoreset_count = 30
+cyberchest.autoreset_calls_count = 30 
+cyberchest.autoreset_count = cyberchest.autoreset_calls_count
 cyberchest.bar_value = 0
 cyberchest.stack_mult = 1
 
@@ -207,7 +208,7 @@ end
 function cyberchest.autoreset_countdown(self)
 	self.autoreset_count = self.autoreset_count - 1
 	if self.autoreset_count < 0 then
-		self.autoreset_count = 30
+		self.autoreset_count = cyberchest.autoreset_calls_count
 		self.current_order = 1
 		self.state = self.ready
 		self.message = "Awaiting orders.."
@@ -587,7 +588,7 @@ function cyberchest.wait_for_ingredients(self)
 		end
 		return --not enough of something
 	end
-	self.autoreset_count = 30 --reset countdown
+	self.autoreset_count = cyberchest.autoreset_calls_count --reset countdown
 	
 	self.predicted_result_count = math.huge
 	local max_results
