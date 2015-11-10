@@ -9,7 +9,7 @@ function new_gui()
 		local handler = gui.dispatch_map[element_name]
 		--game.players[player_index].print(element_name)
 		if handler then		
-			local cyberchest = gui.opened_chests[1]
+			local cyberchest = gui.opened_chests[player_index]
 			handler(cyberchest)
 		end
 	end
