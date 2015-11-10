@@ -43,6 +43,9 @@ function new_gui()
 			gui.dispatch_map["switch_bottom" .. player_index] = cyberchest.on_search_bottom
 		
 		player_gui.cyberchest_main.button_f.add({ type="checkbox", name="reserve_ch", caption="Reserve slots", state = cyberchest.reserve_slots})
+		if game.players[player_index].force.technologies["cyberarms"].researched then
+			player_gui.cyberchest_main.button_f.add({ type="checkbox", name="collect_ch", caption="Ground collection", state = cyberchest.collect_from_ground})
+		end
 		
 		player_gui.cyberchest_main.info_f.add({ type="label", name="status_l", caption="Status: "..cyberchest.message})
 		local recipe = "None"
@@ -64,6 +67,9 @@ function new_gui()
 		player_gui.cyberchest_main.info_f.current_recipe_l.caption = "Recipe: " .. recipe
 		player_gui.cyberchest_main.info_f.progress_bar.value = cyberchest:getprogress()	
 		cyberchest.reserve_slots = player_gui.cyberchest_main.button_f.reserve_ch.state
+		if player_gui.cyberchest_main.button_f.collect_ch then
+			cyberchest.collect_from_ground = player_gui.cyberchest_main.button_f.collect_ch.state
+		end
 	end
 	
 	function gui.hide(player_index)

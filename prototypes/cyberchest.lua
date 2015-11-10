@@ -26,6 +26,44 @@ data:extend(
 	    },
 	  
 		{
+			type = "technology",
+			name = "inventory-override",
+			icon = "__CyberChest__/graphics/inventory-override.png",
+			prerequisites = {"cyberchest"},
+			unit =
+			{
+			  count = 50,
+			  ingredients =
+			  {
+				{"science-pack-1", 1},
+				{"science-pack-2", 1},
+			  },
+			  time = 30
+			},
+			order = "b-d-b",
+	    },
+	  
+		{
+			type = "technology",
+			name = "cyberarms",
+			icon = "__CyberChest__/graphics/cyberarms.png",
+			prerequisites = {"cyberchest", "inventory-override"},
+			unit =
+			{
+			  count = 60,
+			  ingredients =
+			  {
+				{"science-pack-1", 1},
+				{"science-pack-2", 1},
+				{"science-pack-3", 1}
+			  },
+			  time = 30
+			},
+			order = "c-d-b",
+	    },
+	  
+	  
+		{
 			type = "item",
 			name = "cyberchest",
 			icon = "__CyberChest__/graphics/cyberchest-icon.png",

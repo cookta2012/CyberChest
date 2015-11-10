@@ -72,6 +72,13 @@ cyberchest.working = false
 cyberchest.autoreset = true
 cyberchest.reserve_slots = true
 cyberchest.autoreset_count = 30
+cyberchest.bar_value = 0
+cyberchest.collect_from_ground = true
+cyberchest.asm_in = nil
+cyberchest.asm_out = nil
+cyberchest.inv = nil
+cyberchest.ing = nil
+
 
 cyberchest.state = cyberchest.ready
 cyberchest.message = "Awaiting orders.."
@@ -89,6 +96,7 @@ function cyberchest.state_execute(self)
 		self.message = "Looking for an assembling machine.."
 	end 
 	--game.players[1].print(self.message)
+	
 	self:state() --run state function
 end
 
@@ -184,8 +192,7 @@ function cyberchest.find_assembler(self)
 	if not self:has_assembler() then self:search_area(bottom) end
 	
 	if self:has_assembler() then
-		self.state = self.ready
-		self.message = "Awaiting orders.."
+		self:set_state_ready();
 		self:state()
 		return
 	end	
@@ -207,8 +214,7 @@ function cyberchest.on_search_top(self)
 	if not self:search_area(area) then
 		self.message = "No suitable assembler was found/occupied already"
 	else
-		self.state = self.ready
-		self.message = "Awaiting orders.."
+		self:set_state_ready();
 		self:state()
 	end
 end
@@ -218,8 +224,7 @@ function cyberchest.on_search_right(self)
 	if not self:search_area(area) then
 		self.message = "No suitable assembler was found/occupied already"
 	else
-		self.state = self.ready
-		self.message = "Awaiting orders.."
+		self:set_state_ready();
 		self:state()
 	end
 end
@@ -229,8 +234,7 @@ function cyberchest.on_search_left(self)
 	if not self:search_area(area) then
 		self.message = "No suitable assembler was found/occupied already"
 	else
-		self.state = self.ready
-		self.message = "Awaiting orders.."
+		self:set_state_ready();
 		self:state()
 	end
 end
@@ -240,10 +244,14 @@ function cyberchest.on_search_bottom(self)
 	if not self:search_area(area) then
 		self.message = "No suitable assembler was found/occupied already"
 	else
-		self.state = self.ready
-		self.message = "Awaiting orders.."
+		self:set_state_ready();
 		self:state()
 	end
+end
+
+function cyberchest.set_state_ready(self)
+		self.state = self.ready
+		self.message = "Awaiting orders.."
 end
 
 --sets up recipe for the assembler 
@@ -259,12 +267,14 @@ function cyberchest.initialize_assembler(self)
 	if not self.assembler.force.recipes[recipe_name] then
 		--self.state = self.error
 		self.message = "Recipe: ".. recipe_name .. " does not exist"
+		self.state = self.ready
 		return
 	end
 	
 	if not self.assembler.force.recipes[recipe_name].enabled then
 		--self.state = self.error
 		self.message = "Recipe: ".. recipe_name .. " is not available"
+		self.state = self.ready
 		return
 	end
 	
@@ -273,6 +283,7 @@ function cyberchest.initialize_assembler(self)
 	local asm_in = self.assembler.getinventory(defines.inventory.assemblingmachineinput)
 	if not (self:assembler_clear_inventory(asm_out) and self:assembler_clear_inventory(asm_in)) then
 		self.message = "Chest is full"	
+		self.state = self.ready
 		return
 	end
 	--set recipe
@@ -280,64 +291,95 @@ function cyberchest.initialize_assembler(self)
 	if not self.assembler.recipe then
 		--self.state = self.error
 		self.message = "Wrong type of the assembling machine"
+		self.state = self.ready
 		return
 	end
 	--self.assembler.operable = false
+	self.ing = ingredients_to_simplestack(self.assembler.recipe.name)
+	
 	self.state = self.wait_for_ingredients
 	self.message = "Waiting for ingredients.."
 	self:state()
 end
 
+function cyberchest.collected_from_ground(self, stack)
+	if not self.assembler.force.technologies["cyberarms"].researched then return false end
+
+	local area = {{self.entity.position.x - 5,self.entity.position.y - 5}, {self.entity.position.x + 5, self.entity.position.y + 5}}
+	local items = game.findentitiesfiltered{area = area, name = "item-on-ground"}
+	--search
+	local count = 0
+	local enough = false
+	for _,item in pairs(items) do
+		if item.stack.name == stack.name then
+			count = count + 1
+			if count >= stack.count then
+				enough = true
+				break
+			end
+		end	
+	end
+	
+	if not enough then return false end
+	--remove
+	count = 0
+	for _,item in pairs(items) do
+		if item.stack.name == stack.name then
+			item.destroy()
+			count = count + 1
+			if count >= stack.count then
+				break
+			end
+		end	
+	end
+	
+	return true
+end
 --waits for ingredients for the current recipe
 function cyberchest.wait_for_ingredients(self)
-	local asm_out = self.assembler.getinventory(defines.inventory.assemblingmachineoutput)
-	if not asm_out.isempty() then --already contains results
+	if not self.assembler.recipe then self:set_state_ready() end
+	
+	if not self.asm_out then
+		self.asm_out = self.assembler.getinventory(defines.inventory.assemblingmachineoutput)
+		self.asm_in = self.assembler.getinventory(defines.inventory.assemblingmachineinput)
+		self.inv = self.entity.getinventory(defines.inventory.chest)	
+		self.ing = ingredients_to_simplestack(self.assembler.recipe.name)
+	end
+	
+	if not self.asm_out.isempty() then --already contains results
 		self.state = self.wait_for_output
 		self.message = "Waiting for results.."
 		self:state()
 	end
-	--player altered recipe
-	local reset = false
-	if not self.assembler.recipe then
-		reset = true
-	elseif not self:getorder() then
-		reset = true
-	elseif self.assembler.recipe.name ~= self:getorder().name then
-		reset = true
-	end
 	
-	if reset then
-		self.state = self.ready
-		self.message = "Wrong recipe"
-		return
-	end
-	
-	
-	local ing = ingredients_to_simplestack(self.assembler.recipe.name)
-	local inv = self.entity.getinventory(defines.inventory.chest)
-	local asm_in = self.assembler.getinventory(defines.inventory.assemblingmachineinput)
-	
+	local asm_in_count, needed_stack = {};
+	local inv_count;
 	local all_in_place = true
-	for _,item_stack in pairs(ing) do
-		local asm_in_count = asm_in.getitemcount(item_stack.name)
-		local inv_count = inv.getitemcount(item_stack.name)
+	
+	self:reset_bar()
+	for _,item_stack in pairs(self.ing) do
+		asm_in_count = self.asm_in.getitemcount(item_stack.name)
+		inv_count = self.inv.getitemcount(item_stack.name)
 		if self.reserve_slots then
 			inv_count = inv_count - 1 --reserve 1 item
 		end
 		
 		if inv_count + asm_in_count < item_stack.count then
-			all_in_place = false
-		end
-			--insert what we have already, up to the needed
-		item_stack.count = math.min(inv_count, item_stack.count - asm_in_count)
-			
-		if item_stack.count > 0 then
-			if not stack_transfer(inv, item_stack, self.assembler) then
-				self.message = "Unknown error while trying to insert ingredients"	
+			needed_stack = {name = item_stack.name, count = item_stack.count - asm_in_count - inv_count} --only needed count
+			if self.collect_from_ground and self.inv.caninsert(needed_stack) then --option, tech, space
+				if self:collected_from_ground(needed_stack) then
+					self.inv.insert(needed_stack)
+					inv_count = inv_count + needed_stack.count
+				else
+					all_in_place = false
+				end
+			else
+				self:restore_bar()
 				return
 			end
 		end
 	end
+	self:restore_bar()
 	
 	if not all_in_place then
 		if self.autoreset then --resets after 5 seconds
@@ -348,28 +390,45 @@ function cyberchest.wait_for_ingredients(self)
 	self.autoreset_count = 30 --reset countdown
 	
 	--all in place
-	--[[for _,item_stack in pairs(ing) do
+	for _,item_stack in pairs(self.ing) do
 	--insert only needed count
 		if item_stack.count > 0 then
-			if not stack_transfer(inv, item_stack, self.assembler) then
+			if not stack_transfer(self.inv, item_stack, self.assembler) then
 				self.message = "Unknown error while trying to insert ingredients"
 				return
 			end
 		end
-	end]]--
+	end
 	
 	self.state = self.wait_for_output
 	self.message = "Waiting for results.."
 	self:state()
 end
+
+function cyberchest.reset_bar(self)
+	if not self.assembler.force.technologies["inventory-override"].researched then return end
+	local inventory = self.entity.getinventory(defines.inventory.chest)
+	self.bar_value = inventory.getbar()
+	inventory.setbar()
+end
+
+function cyberchest.restore_bar(self)
+	if not self.assembler.force.technologies["inventory-override"].researched then return end
+	local inventory = self.entity.getinventory(defines.inventory.chest)
+	inventory.setbar(self.bar_value)
+end
+
 --waits for the item to be made
 function cyberchest.wait_for_output(self)
-	local asm_out = self.assembler.getinventory(defines.inventory.assemblingmachineoutput)
-	if asm_out.isempty() then
+	if not self.asm_out then
+		self.asm_out = self.assembler.getinventory(defines.inventory.assemblingmachineoutput)
+	end
+	if self.asm_out.isempty() then
 		return
 	end
 	
-	if not self:assembler_clear_inventory(asm_out) then
+	
+	if not self:assembler_clear_inventory(self.asm_out) then
 		self.message = "Chest is full"	
 		return
 	end
@@ -384,11 +443,14 @@ function cyberchest.assembler_clear_inventory(self, asm_inv)
 	local item_map = asm_inv.getcontents()
 	local inventory = self.entity.getinventory(defines.inventory.chest)
 	
+	self:reset_bar()
 	for name,count in pairs(item_map) do
 		if not stack_transfer(asm_inv, {name = name, count = count}, inventory) then
+			self:restore_bar()
 			return false
 		end
 	end
+	self:restore_bar()
 	return true
 end
 
