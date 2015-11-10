@@ -1,7 +1,7 @@
 require "defines"
 require "script.cyberchest"
 require "script.gui"
-local version = 9
+local version = 10
 local forced_reset = false
 tickerA = 1
 script.on_init(function()
