@@ -41,7 +41,8 @@ function new_gui()
 			gui.dispatch_map["switch_rigth" .. player_index] = cyberchest.on_search_right
 		player_gui.cyberchest_main.button_f.switch_f.add({ type="button", name="switch_bottom".. player_index, caption="v"})
 			gui.dispatch_map["switch_bottom" .. player_index] = cyberchest.on_search_bottom
-		--player_gui.cyberchest_main.button_f.add({ type="checkbox", name="autoreset_ch", caption="Autoreset", state = cyberchest.autoreset})
+		
+		player_gui.cyberchest_main.button_f.add({ type="checkbox", name="reserve_ch", caption="Reserve slots", state = cyberchest.reserve_slots})
 		
 		player_gui.cyberchest_main.info_f.add({ type="label", name="status_l", caption="Status: "..cyberchest.message})
 		local recipe = "None"
@@ -62,7 +63,7 @@ function new_gui()
 		end
 		player_gui.cyberchest_main.info_f.current_recipe_l.caption = "Recipe: " .. recipe
 		player_gui.cyberchest_main.info_f.progress_bar.value = cyberchest:getprogress()	
-		--cyberchest.autoreset = player_gui.cyberchest_main.button_f.autoreset_ch.state
+		cyberchest.reserve_slots = player_gui.cyberchest_main.button_f.reserve_ch.state
 	end
 	
 	function gui.hide(player_index)

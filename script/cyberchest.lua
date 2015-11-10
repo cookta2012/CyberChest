@@ -70,6 +70,7 @@ cyberchest.is_asm_free = nil
 cyberchest.current_order = 1
 cyberchest.working = false
 cyberchest.autoreset = true
+cyberchest.reserve_slots = true
 cyberchest.autoreset_count = 30
 
 cyberchest.state = cyberchest.ready
@@ -116,7 +117,11 @@ function cyberchest.autoreset_countdown(self)
 end
 
 function cyberchest.getorder(self)
-	return self.entity.getrequestslot(self.current_order)
+	local stack = self.entity.getrequestslot(self.current_order)
+	if stack and self.reserve_slots then
+		stack.count = stack.count + 1 --produce 1 extra
+	end
+	return stack
 end
 
 function cyberchest.getprogress(self)
@@ -314,12 +319,17 @@ function cyberchest.wait_for_ingredients(self)
 	
 	local all_in_place = true
 	for _,item_stack in pairs(ing) do
-		if inv.getitemcount(item_stack.name) + asm_in.getitemcount(item_stack.name) < item_stack.count then
+		local asm_in_count = asm_in.getitemcount(item_stack.name)
+		local inv_count = inv.getitemcount(item_stack.name)
+		if self.reserve_slots then
+			inv_count = inv_count - 1 --reserve 1 item
+		end
+		
+		if inv_count + asm_in_count < item_stack.count then
 			all_in_place = false
 		end
 			--insert what we have already, up to the needed
-		local asm_in_count = asm_in.getitemcount(item_stack.name)
-		item_stack.count = math.min(inv.getitemcount(item_stack.name), item_stack.count - asm_in_count)
+		item_stack.count = math.min(inv_count, item_stack.count - asm_in_count)
 			
 		if item_stack.count > 0 then
 			if not stack_transfer(inv, item_stack, self.assembler) then
