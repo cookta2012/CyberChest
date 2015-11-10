@@ -45,14 +45,21 @@ function new_gui()
 		player_gui.cyberchest_main.button_f.add({ type="checkbox", name="reserve_ch", caption="Reserve slots", state = cyberchest.reserve_slots})
 		if game.players[player_index].force.technologies["cyberarms"].researched then
 			player_gui.cyberchest_main.button_f.add({ type="checkbox", name="collect_ch", caption="Ground collection", state = cyberchest.collect_from_ground})
-		end
+		end	
+		player_gui.cyberchest_main.button_f.add({ type="checkbox", name="ignore_ch", caption="Ignore errors", state = cyberchest.ignore_errors})
 		
 		player_gui.cyberchest_main.info_f.add({ type="label", name="status_l", caption="Status: "..cyberchest.message})
-		local recipe = "None"
+		--recipe name
+		local recipe_loc_name
 		if cyberchest:getorder() then
-			recipe = cyberchest:getorder().name
+			recipe_loc_name = game.getlocaliseditemname(cyberchest:getorder().target_stack.name)
 		end
-		player_gui.cyberchest_main.info_f.add({ type="label", name="current_recipe_l", caption="Recipe: " .. recipe})
+		if recipe_loc_name then
+			player_gui.cyberchest_main.info_f.add({ type="label", name="current_recipe_l", caption={"", "Recipe: ", recipe_loc_name}})
+		else
+			player_gui.cyberchest_main.info_f.add({ type="label", name="current_recipe_l", caption="Recipe: None"})
+		end
+		--progress
 		player_gui.cyberchest_main.info_f.add({ type="progressbar", name="progress_bar", size=100, value = cyberchest:getprogress()})
 	end
 	
@@ -60,13 +67,18 @@ function new_gui()
 		local player_gui = game.players[player_index].gui.top
 		
 		player_gui.cyberchest_main.info_f.status_l.caption = "Status: "..cyberchest.message
-		local recipe = "None"
+		local recipe_loc_name
 		if cyberchest:getorder() then
-			recipe = cyberchest:getorder().name
+			recipe_loc_name = game.getlocaliseditemname(cyberchest:getorder().target_stack.name)
 		end
-		player_gui.cyberchest_main.info_f.current_recipe_l.caption = "Recipe: " .. recipe
+		if recipe_loc_name then
+			player_gui.cyberchest_main.info_f.current_recipe_l.caption = {"", "Recipe: ", recipe_loc_name}
+		else
+			player_gui.cyberchest_main.info_f.current_recipe_l.caption = "Recipe: None"
+		end
 		player_gui.cyberchest_main.info_f.progress_bar.value = cyberchest:getprogress()	
 		cyberchest.reserve_slots = player_gui.cyberchest_main.button_f.reserve_ch.state
+		cyberchest.ignore_errors = player_gui.cyberchest_main.button_f.ignore_ch.state
 		if player_gui.cyberchest_main.button_f.collect_ch then
 			cyberchest.collect_from_ground = player_gui.cyberchest_main.button_f.collect_ch.state
 		end

@@ -1,11 +1,5 @@
 require "defines"
 require "recipe_finder"
---tips, limitations, and known issues 
---productivity modules
---autoreset
---do not take anything (apart from modules) directly from the assembler
---you can insert some, but not all of the ingredients directly to the assembler
---use smart inserters for chest or assembler input (connect them with wires)
 
 --transforms recipe.ingredient format to simplestack format
 function ingredients_to_simplestack(recipename)
@@ -75,11 +69,12 @@ cyberchest.working = false
 cyberchest.autoreset = true
 cyberchest.reserve_slots = true
 cyberchest.collect_from_ground = true
+cyberchest.ignore_errors = false
 cyberchest.autoreset_count = 30
 cyberchest.bar_value = 0
+cyberchest.stack_mult = 1
 
 cyberchest.all_green = false
-cyberchest.recipes = {}
 cyberchest.orders = {}
 
 cyberchest.asm_in = nil
@@ -93,6 +88,7 @@ cyberchest.speed_50_allowed = false
 cyberchest.speed_100_allowed = false
 cyberchest.speed_200_allowed = false
 cyberchest.speed_400_allowed = false
+
 cyberchest.beacon = nil
 cyberchest.asm_side = nil
 
@@ -162,6 +158,30 @@ function cyberchest.check_tech(self)
 		end
 	end
 	
+	if self.stack_mult < 2 then
+		if self.assembler.force.technologies["burst_input_1"].researched then 
+			self.stack_mult = 2
+		end
+	end
+	
+	if self.stack_mult < 3 then
+		if self.assembler.force.technologies["burst_input_2"].researched then 
+			self.stack_mult = 4
+		end
+	end
+	
+	if self.stack_mult < 8 then
+		if self.assembler.force.technologies["burst_input_3"].researched then 
+			self.stack_mult = 8
+		end
+	end
+	
+	if self.stack_mult < math.huge then
+		if self.assembler.force.technologies["burst_input_4"].researched then 
+			self.stack_mult = math.huge
+		end
+	end
+	
 end
 
 
@@ -194,24 +214,39 @@ end
 
 function cyberchest.clear_orders(self)
 	self.orders = {}
-	self.recipes = {}
+	self.all_green = false
 end
 
 function cyberchest.get_recipes(self)
 	self:clear_orders()
-	k = 1
+	local recipe
+	local k = 1
 	for i = 1, self.requester_slots do
 		local item = self.entity.getrequestslot(i)
 		if item then
-			self.orders[k] = item
-			self.recipes[k] = self:get_recipe_for(item.name) 
-			if not self.recipes[k]  then
+			recipe = self:get_recipe_name_for(item.name)
+			if not self.ignore_errors and not recipe then
 				self:clear_orders()
 				self.working = false
 				self.state = self.ready
 				return
-			end		
-			k = k + 1
+			end
+			--ignoring bad recipes
+			if recipe then 
+				self.orders[k] = {
+					target_stack = item, 
+					recipe_name = recipe,	
+					result_amount = ResultCount(self.assembler.force.recipes[recipe], item.name), 
+					stack_size = game.itemprototypes[item.name].stacksize,
+					ingredients = ingredients_to_simplestack(recipe),
+					ingredients_stacksizes = {}
+				}
+				for	_,ing in pairs(self.orders[k].ingredients) do
+					self.orders[k].ingredients_stacksizes[ing.name] = game.itemprototypes[ing.name].stacksize
+				end
+				
+				k = k + 1			
+			end
 		end	
 	end
 	if #self.orders == 0 then
@@ -224,7 +259,7 @@ function cyberchest.get_recipes(self)
 	self.current_order = 1
 end
 
-function cyberchest.get_recipe_for(self, item_name)
+function cyberchest.get_recipe_name_for(self, item_name)
 	local exclude_list = {}
 	local recipe_name = ""
 	repeat
@@ -261,27 +296,16 @@ function cyberchest.getorder(self)
 		return nil
 	end
 	
-	local stack = {name = self.orders[self.current_order].name, count = self.orders[self.current_order].count}
-	if self.reserve_slots then
-		stack.count = stack.count + 1 --produce 1 extra
-	end
-	return stack
+	--local order = table.deepcopy()
+	return self.orders[self.current_order]
 end
-
-function cyberchest.getrecipe(self)
-	if not self.all_green then
-		return nil
-	end
-	return self.recipes[self.current_order]
-end
-
 
 function cyberchest.getprogress(self)
 	if not self.all_green then
 		return 0
 	end
-	local count = self.entity.getitemcount(self:getorder().name)
-	local progress = count/self:getorder().count
+	local count = self.entity.getitemcount(self:getorder().target_stack.name)
+	local progress = count/self:getorder().target_stack.count
 	return progress
 end
 	
@@ -441,9 +465,9 @@ end
 
 --sets up recipe for the assembler 
 function cyberchest.initialize_assembler(self)
-	local recipe_name = self:getrecipe()
+	local recipe_name = self:getorder().recipe_name
 	
-	if self.assembler.recipe and self.assembler.recipe.name == self:getrecipe() and self.ing then --skip
+	if self.assembler.recipe and self.assembler.recipe.name == recipe_name then --skip
 		self.state = self.wait_for_ingredients
 		self.message = "Waiting for ingredients.."
 		self:state()
@@ -455,55 +479,52 @@ function cyberchest.initialize_assembler(self)
 		self.state = self.ready
 		return
 	end
-	--set recipe
+
+		--set recipe
 	self.assembler.recipe = self.assembler.force.recipes[recipe_name]  
 	if not self.assembler.recipe then
-		--self.state = self.error
 		self.message = "Wrong type of the assembling machine"
 		self.state = self.ready
 		return
 	end
 	--self.assembler.operable = false
-	self.ing = ingredients_to_simplestack(self.assembler.recipe.name)
 	
 	self.state = self.wait_for_ingredients
 	self.message = "Waiting for ingredients.."
 	self:state()
 end
 
-function cyberchest.collected_from_ground(self, stack)
-	if not self.ground_collection_allowed then return false end
-
+--counts items with particular name up to max_count 
+function cyberchest.get_count_on_ground(self, item_name, max_count)
+	if not self.ground_collection_allowed then return 0 end
 	local area = {{self.entity.position.x - 5,self.entity.position.y - 5}, {self.entity.position.x + 5, self.entity.position.y + 5}}
 	local items = game.findentitiesfiltered{area = area, name = "item-on-ground"}
-	--search
 	local count = 0
-	local enough = false
 	for _,item in pairs(items) do
-		if item.stack.name == stack.name then
+		if count >= max_count then --stop when enough
+			return count
+		end
+		if item.stack.name == item_name then
 			count = count + 1
-			if count >= stack.count then
-				enough = true
-				break
-			end
 		end	
 	end
-	
-	if not enough then return false end
-	--remove
-	count = 0
-	for _,item in pairs(items) do
-		if item.stack.name == stack.name then
-			item.destroy()
-			count = count + 1
-			if count >= stack.count then
-				break
-			end
-		end	
-	end
-	
-	return true
+	return count
 end
+--removes items with particular name
+function cyberchest.remove_from_ground(self, item_name, count)
+	local area = {{self.entity.position.x - 5,self.entity.position.y - 5}, {self.entity.position.x + 5, self.entity.position.y + 5}}
+	local items = game.findentitiesfiltered{area = area, name = "item-on-ground"}
+	for _,item in pairs(items) do
+		if count == 0 then
+			return
+		end
+		if item.stack.name == item_name then
+			item.destroy()
+			count = count - 1
+		end	
+	end
+end
+
 --waits for ingredients for the current recipe
 function cyberchest.wait_for_ingredients(self)
 
@@ -512,33 +533,51 @@ function cyberchest.wait_for_ingredients(self)
 		self.message = "Waiting for results.."
 		--self:state()
 	end
-
-	local asm_in_count, needed_stack = {}
-	local inv_count
+	if self:count_left() == 0 then -- in case when something (say a robot) brings results from outside
+		self.state = self.ready
+		self.message = "Awaiting orders.."
+		return
+	end
+	
+	local asm_in_count, desirable_stack
+	local transfer_stack = {}
+	local inv_count, ground_count
 	local all_in_place = true
 
 	self:reset_bar()
-	for _,item_stack in pairs(self.ing) do
+	local order = self:getorder()
+	for _,item_stack in pairs(order.ingredients) do
 		asm_in_count = self.asm_in.getitemcount(item_stack.name)
 		inv_count = self.inv.getitemcount(item_stack.name)
 		if self.reserve_slots then
 			inv_count = inv_count - 1 --reserve 1 item
 		end
-	
-		if inv_count + asm_in_count < item_stack.count then	
-			needed_stack = {name = item_stack.name, count = item_stack.count - asm_in_count - inv_count} --only needed counter
-			if self.collect_from_ground and self.inv.caninsert(needed_stack) then --option, tech, space
-				if self:collected_from_ground(needed_stack) then
-					self.inv.insert(needed_stack)
-					inv_count = inv_count + needed_stack.count
-				else
-					all_in_place = false
-					break
+		--count should be no more than: stack size limit, required by tech stack size, required by left count stack size 
+		desirable_stack = {name = item_stack.name, count = math.min(order.ingredients_stacksizes[item_stack.name], self.stack_mult*item_stack.count, math.ceil(self:count_left()/order.result_amount)*item_stack.count)}
+						--- comment: math.ceil(self:count_left()/self:result_count()) - can produce at least one result
+		       
+		if asm_in_count < desirable_stack.count then
+		
+			if inv_count + asm_in_count < desirable_stack.count and self.collect_from_ground then -- try to grab from ground
+				ground_count = self:get_count_on_ground(item_stack.name, desirable_stack.count - inv_count)
+				
+				if ground_count > 0 and self.inv.caninsert({name = item_stack.name, count = ground_count}) then --grab from ground
+					self.inv.insert({name = item_stack.name, count = ground_count})
+					inv_count = inv_count + ground_count
+					self:remove_from_ground(item_stack.name, ground_count)
 				end
-			else
+			end
+			
+			if inv_count + asm_in_count < item_stack.count then --minimal requirements still aren't met
 				all_in_place = false
 				break
 			end
+			transfer_stack.name = item_stack.name;
+			transfer_stack.count = math.min(desirable_stack.count - asm_in_count, inv_count)
+			
+			if transfer_stack.count > 0 then
+				stack_transfer(self.inv, transfer_stack, self.assembler)
+			end			
 		end
 	end
 	self:restore_bar()
@@ -551,17 +590,15 @@ function cyberchest.wait_for_ingredients(self)
 	end
 	self.autoreset_count = 30 --reset countdown
 	
-	--all in place
-	for _,item_stack in pairs(self.ing) do
-	--insert only needed count
-		if item_stack.count > 0 then
-			if not stack_transfer(self.inv, item_stack, self.assembler) then
-				self.message = "Unknown error while trying to insert ingredients"
-				return
-			end
+	self.predicted_result_count = math.huge
+	local max_results
+	for _,ing in pairs(order.ingredients) do
+		max_results = math.floor(self.asm_in.getitemcount(ing.name)/ing.count)
+		if max_results < self.predicted_result_count then
+			self.predicted_result_count = max_results*order.result_amount --predict number of produced items
 		end
 	end
-	
+
 	self.state = self.wait_for_output
 	self.message = "Waiting for results.."
 	self:state()
@@ -582,14 +619,22 @@ end
 
 --waits for the item to be made
 function cyberchest.wait_for_output(self)
-	if self.asm_out.isempty() then
-		return
+	local result_count = self.asm_out.getitemcount(self:getorder().target_stack.name)
+	if self.asm_out.isempty() or math.min(self.predicted_result_count, self:getorder().stack_size)  
+	> result_count then --not enough results yet
+		return --min - in case stack size is less then predicted amount
 	end
 	
 	if not self:assembler_clear_inventory(self.asm_out) then
 		self.message = "Chest is full"	
 		return
 	end
+		
+	self.predicted_result_count = self.predicted_result_count - result_count
+	if self.predicted_result_count > 0 then --didn't collect all of the items
+		return --stay in this state
+	end
+	
 	
 	if self:order_done() then
 		self.state = self.ready
@@ -634,13 +679,24 @@ function cyberchest.next_order(self)
 	end
 end
 
+function cyberchest.count_left(self) --count to complete an order
+	local count = self.entity.getitemcount(self:getorder().target_stack.name)
+	if count < self:getorder().target_stack.count then
+		return self:getorder().target_stack.count - count
+	else
+		return 0
+	end
+end
+
 function cyberchest.order_done(self)
-	local count = self.entity.getitemcount(self:getorder().name)
-	if count >= self:getorder().count then
+	local count = self.entity.getitemcount(self:getorder().target_stack.name)
+	if count >= self:getorder().target_stack.count then
 		return true
 	else
 		return false
 	end
 end
+
+
 
 

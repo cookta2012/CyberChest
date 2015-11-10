@@ -7,6 +7,15 @@ function FoundInProducts(recipe, item_name)
 	return false
 end
 
+function ResultCount(recipe, item_name)
+	for j, result in pairs(recipe.products) do
+		if result.name == item_name then
+			return result.amount 
+		end
+	end
+	return 0
+end
+
 function InExcluded(recipe_name, excluded_list)
 	for	_,name in pairs(excluded_list) do
 		if name == recipe_name then

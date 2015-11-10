@@ -1,19 +1,43 @@
 require "defines"
 require "script.cyberchest"
 require "script.gui"
-
+local version = 9
+local forced_reset = false
 game.oninit(function()
 if not glob.cyberchests then glob.cyberchests = {} end
 glob.gui = new_gui()
+glob.version = version
 end)
 
 game.onload(function()
 	for _,chest in pairs(glob.cyberchests) do
 		setmetatable(chest, cyberchest)
-		chest.state = chest.ready
 	end
+	if not glob.version or glob.version < version then
+		migrate()
+	end
+	if forced_reset then
+		for _,chest in pairs(glob.cyberchests) do
+			chest.state = chest.ready
+			chest.all_green = false
+		end
+	end
+	
 	glob.gui = new_gui()
 end)
+
+function migrate()
+	if not glob.version then
+		glob.version = 9
+		for _,chest in pairs(glob.cyberchests) do
+			chest.state = chest.ready
+			chest.all_green = false
+		end
+	end
+	--add migration for future updates here
+	--if glob.version < 10 then
+	
+end
 
 game.onevent(defines.events.onbuiltentity, function(event)
 	if event.createdentity.name == "cyberchest" then
@@ -63,7 +87,7 @@ function cyberchest_get_from_entity(entity)
 end
 
 game.onevent(defines.events.ontick, function(event)
-	if event.tick % 10 ~= 0 then return end
+	if event.tick % 20 ~= 0 then return end
 	--game.players[1].print(#glob.cyberchests)
 	
 	for i,chest in pairs(glob.cyberchests) do
