@@ -137,7 +137,6 @@ data:extend(
 				height = 100,
 				shift = {0.35, 0.05},
 			},
-			circuit_wire_max_distance = 7.5
 		}
 	}
 )
