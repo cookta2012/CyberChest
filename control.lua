@@ -10,6 +10,7 @@ end)
 game.onload(function()
 	for _,chest in pairs(glob.cyberchests) do
 		setmetatable(chest, cyberchest)
+		chest.state = chest.ready
 	end
 	glob.gui = new_gui()
 end)
@@ -20,6 +21,15 @@ game.onevent(defines.events.onbuiltentity, function(event)
 		--game.players[1].print("chest_created")
 	end
 end)
+
+game.onevent(defines.events.onrobotbuiltentity, function(event)
+	if event.createdentity.name == "cyberchest" then
+		table.insert(glob.cyberchests, cyberchest:new({entity = event.createdentity, is_asm_free = is_assembler_free}))
+		--game.players[1].print("chest_created")
+	end
+end)
+
+
 
 --[[game.onevent(defines.events.onentitydied, function(event)
 	if event.entity.name == "cyberchest" then
@@ -60,13 +70,14 @@ game.onevent(defines.events.ontick, function(event)
 		if chest:is_valid() then
 			chest:state_execute()
 		else	
+			chest:destroy_beacon()
 			chest = nil
 			table.remove(glob.cyberchests,i)
 		end
 	end
 
 	for i,player in pairs(game.players) do
-		if player.opened and player.opened.name == 'cyberchest' then
+		if player.character and player.opened and player.opened.name == 'cyberchest' then
 			glob.gui.show(i, cyberchest_get_from_entity(player.opened))
 		else
 			glob.gui.hide(i)
