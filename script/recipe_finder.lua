@@ -7,7 +7,7 @@ function FoundInProducts(recipe, item_name)
 	return false
 end
 
-function ResultCount(recipe, item_name)
+function Result_Count(recipe, item_name)
 	for j, result in pairs(recipe.products) do
 		if result.name == item_name then
 			return result.amount 
@@ -25,7 +25,7 @@ function InExcluded(recipe_name, excluded_list)
 	return false
 end
 
-function GetRecipeFor(item_name, excluded_list)
+function Get_Recipe_For(item_name, excluded_list)
 	if not game.forces.player.recipes[item_name] or InExcluded(item_name, excluded_list) then
 		for i, rec in pairs(game.forces.player.recipes) do
 			if not InExcluded(rec.name, excluded_list) and FoundInProducts(rec, item_name) then

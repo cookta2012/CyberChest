@@ -1,5 +1,5 @@
 require "defines"
-
+require "cyberchest"
 function new_gui()
 	local gui = {}
 	gui.opened_chests = {}
@@ -9,7 +9,7 @@ function new_gui()
 		local handler = gui.dispatch_map[element_name]
 		--game.players[player_index].print(element_name)
 		if handler then		
-			local cyberchest = gui.opened_chests[player_index]
+			local cyberchest = gui.opened_chests[1]
 			handler(cyberchest)
 		end
 	end
@@ -28,7 +28,7 @@ function new_gui()
 
 		
 		player_gui.cyberchest_main.button_f.add({ type="button", name="start_pause_b".. player_index, caption="Start/Pause"})
-			gui.dispatch_map["start_pause_b".. player_index] = cyberchest.on_start_pause
+			gui.dispatch_map["start_pause_b".. 1] = cyberchest.on_start_pause
 		player_gui.cyberchest_main.button_f.add({ type="button", name="reset_b".. player_index, caption="Reset"})
 			gui.dispatch_map["reset_b" .. player_index] = cyberchest.on_reset
 		player_gui.cyberchest_main.button_f.add({ type="label", name="switch_capt", caption="Switch assembler:"})
@@ -52,7 +52,7 @@ function new_gui()
 		--recipe name
 		local recipe_loc_name
 		if cyberchest:getorder() then
-			recipe_loc_name = game.getlocaliseditemname(cyberchest:getorder().target_stack.name)
+			recipe_loc_name = game.get_localised_item_name(cyberchest:getorder().target_stack.name)
 		end
 		if recipe_loc_name then
 			player_gui.cyberchest_main.info_f.add({ type="label", name="current_recipe_l", caption={"", "Recipe: ", recipe_loc_name}})
@@ -69,7 +69,7 @@ function new_gui()
 		player_gui.cyberchest_main.info_f.status_l.caption = "Status: "..cyberchest.message
 		local recipe_loc_name
 		if cyberchest:getorder() then
-			recipe_loc_name = game.getlocaliseditemname(cyberchest:getorder().target_stack.name)
+			recipe_loc_name = game.get_localised_item_name(cyberchest:getorder().target_stack.name)
 		end
 		if recipe_loc_name then
 			player_gui.cyberchest_main.info_f.current_recipe_l.caption = {"", "Recipe: ", recipe_loc_name}
@@ -102,3 +102,4 @@ function new_gui()
 	
 	return gui
 end
+
