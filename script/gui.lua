@@ -28,7 +28,7 @@ function new_gui()
 
 		
 		player_gui.cyberchest_main.button_f.add({ type="button", name="start_pause_b".. player_index, caption="Start/Pause"})
-			gui.dispatch_map["start_pause_b".. 1] = cyberchest.on_start_pause
+			gui.dispatch_map["start_pause_b".. player_index] = cyberchest.on_start_pause
 		player_gui.cyberchest_main.button_f.add({ type="button", name="reset_b".. player_index, caption="Reset"})
 			gui.dispatch_map["reset_b" .. player_index] = cyberchest.on_reset
 		player_gui.cyberchest_main.button_f.add({ type="label", name="switch_capt", caption="Switch assembler:"})

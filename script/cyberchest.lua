@@ -357,13 +357,13 @@ end
 function cyberchest.create_beacon(self)
 	self:destroy_beacon()
 	if self.speed_400_allowed then
-		self.beacon = game.game.surfaces['nauvis']s['nauvis'].create_entity{name = "cyber_beacon_400", position = self:get_beacon_placement(), force = self.entity.force}
+		self.beacon = self.surface.create_entity{name = "cyber_beacon_400", position = self:get_beacon_placement(), force = self.entity.force}
 	elseif self.speed_200_allowed then
-		self.beacon = game.game.surfaces['nauvis']s['nauvis'].create_entity{name = "cyber_beacon_200", position = self:get_beacon_placement(), force = self.entity.force}
+		self.beacon = self.surface.create_entity{name = "cyber_beacon_200", position = self:get_beacon_placement(), force = self.entity.force}
 	elseif self.speed_100_allowed then
-		self.beacon = game.game.surfaces['nauvis']s['nauvis'].create_entity{name = "cyber_beacon_100", position = self:get_beacon_placement(), force = self.entity.force}
+		self.beacon = self.surface.create_entity{name = "cyber_beacon_100", position = self:get_beacon_placement(), force = self.entity.force}
 	elseif self.speed_50_allowed then
-		self.beacon = game.game.surfaces['nauvis']s['nauvis'].create_entity{name = "cyber_beacon_50", position = self:get_beacon_placement(), force = self.entity.force}
+		self.beacon = self.surface.create_entity{name = "cyber_beacon_50", position = self:get_beacon_placement(), force = self.entity.force}
 	end
 	
 	if self.beacon and self.beacon.valid then
@@ -415,7 +415,7 @@ function cyberchest.find_assembler(self)
 end
 
 function cyberchest.search_area(self, area)
-	local targets = game.game.surfaces['nauvis']s['nauvis'].find_entities_filtered({area = area,type = "assembling-machine"})
+	local targets = self.surface.find_entities_filtered({area = area,type = "assembling-machine"})
 	for _,asm in pairs(targets) do
 		if self.is_asm_free(asm) then
 			self:assembler_assign(asm)
@@ -501,7 +501,7 @@ end
 function cyberchest.get_count_on_ground(self, item_name, max_count)
 	if not self.ground_collection_allowed then return 0 end
 	local area = {{self.entity.position.x - 5,self.entity.position.y - 5}, {self.entity.position.x + 5, self.entity.position.y + 5}}
-	local items = game.game.surfaces['nauvis']s['nauvis'].find_entities_filtered{area = area, name = "item-on-ground"}
+	local items = self.surface.find_entities_filtered{area = area, name = "item-on-ground"}
 	local count = 0
 	for _,item in pairs(items) do
 		if count >= max_count then --stop when enough
@@ -516,7 +516,7 @@ end
 --removes items with particular name
 function cyberchest.remove_from_ground(self, item_name, count)
 	local area = {{self.entity.position.x - 5,self.entity.position.y - 5}, {self.entity.position.x + 5, self.entity.position.y + 5}}
-	local items = game.surfaces['nauvis'].find_entities_filtered{area = area, name = "item-on-ground"}
+	local items = self.surface.find_entities_filtered{area = area, name = "item-on-ground"}
 	for _,item in pairs(items) do
 		if count == 0 then
 			return
