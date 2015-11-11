@@ -109,7 +109,11 @@ end)
 function ticker(tick)
 	local ticker_chests_max = 10
 	local chest
-	for cycle = 0, ticker_chests_max do
+	-- reset index if out of bounds
+	if tickerIndex > #global.cyberchests then
+		tickerIndex = 1
+	end
+	for cycle = ticker_chests_max, 0, -1 do
 		curCycle = cycle + tickerIndex
 		if global.cyberchests[curCycle] ~= nil then
 			chest = global.cyberchests[curCycle]
@@ -118,13 +122,10 @@ function ticker(tick)
 			else	
 				chest:destroy_beacon()
 				chest = nil
-				table.remove(global.cyberchests,i)
+				table.remove(global.cyberchests, curCycle)
 			end
-			tickerIndex = tickerIndex + 1
-			cycle = cycle + 1
-		else
-		tickerIndex = 1
 		end
 	end
+	tickerIndex = tickerIndex + ticker_chests_max
 	if tick % 20 ~= 0 then return true else return false end
 end
