@@ -3,7 +3,6 @@ require "script.cyberchest"
 require "script.gui"
 local version = 10
 local forced_reset = false
-local tickerIndex = 1
 script.on_init(function()
 if not global.cyberchests then global.cyberchests = {} end
 global.gui = new_gui()
@@ -87,8 +86,9 @@ function cyberchest_get_from_entity(entity)
 end
 
 script.on_event(defines.events.on_tick, function(event)
+	ticker()
 	--game.players[1].print(cycles)
-	if ticker(event.tick) then
+	if event.tick % 20 ~= 0 then
 		for i,player in pairs(game.players) do
 			if player.character and player.opened and player.opened.name == 'cyberchest' then
 				thingOpened = cyberchest_get_from_entity(player.opened)
@@ -106,26 +106,11 @@ script.on_event(defines.events.on_gui_click, function(event)
 	global.gui.dispatch(event.player_index, event.element.name)
 end)
 
-function ticker(tick)
-	local ticker_chests_max = 10
-	local chest
+function ticker()
 	-- reset index if out of bounds
-	if tickerIndex > #global.cyberchests then
-		tickerIndex = 1
-	end
-	for cycle = ticker_chests_max, 0, -1 do
-		curCycle = cycle + tickerIndex
-		if global.cyberchests[curCycle] ~= nil then
-			chest = global.cyberchests[curCycle]
-			if chest:is_valid() then
-				chest:state_execute()
-			else	
-				chest:destroy_beacon()
-				chest = nil
-				table.remove(global.cyberchests, curCycle)
-			end
+	for i,v in ipairs(global.cyberchests) do
+		if not v:on_tick() then
+			table.remove(global.cyberchests, i)
 		end
 	end
-	tickerIndex = tickerIndex + ticker_chests_max
-	if tick % 20 ~= 0 then return true else return false end
 end

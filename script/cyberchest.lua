@@ -63,6 +63,7 @@ cyberchest = {}
 cyberchest.__index = cyberchest
 cyberchest.requester_slots = 10
 cyberchest.assembler = nil
+cyberchest.tick_index = 0
 
 cyberchest.entity = nil	
 cyberchest.is_asm_free = nil
@@ -114,6 +115,25 @@ function cyberchest.state_execute(self)
 	--game.players[1].print(self.message)
 	
 	self:state() --run state function
+end
+
+function cyberchest.on_tick(self)
+	if not self.tick_index then
+	self.tick_index = 10
+	end
+	if self.tick_index == 20 then
+		self.tick_index = 1
+		if self:is_valid() then
+			self:state_execute()
+			return true
+		else	
+			self:destroy_beacon()
+			return false
+		end
+	else
+		self.tick_index = self.tick_index + 1
+		return true
+	end
 end
 
 function cyberchest.check_tech(self)
@@ -357,13 +377,13 @@ end
 function cyberchest.create_beacon(self)
 	self:destroy_beacon()
 	if self.speed_400_allowed then
-		self.beacon = self.surface.create_entity{name = "cyber_beacon_400", position = self:get_beacon_placement(), force = self.entity.force}
+		self.beacon = self.entity.surface.create_entity{name = "cyber_beacon_400", position = self:get_beacon_placement(), force = self.entity.force}
 	elseif self.speed_200_allowed then
-		self.beacon = self.surface.create_entity{name = "cyber_beacon_200", position = self:get_beacon_placement(), force = self.entity.force}
+		self.beacon = self.entity.surface.create_entity{name = "cyber_beacon_200", position = self:get_beacon_placement(), force = self.entity.force}
 	elseif self.speed_100_allowed then
-		self.beacon = self.surface.create_entity{name = "cyber_beacon_100", position = self:get_beacon_placement(), force = self.entity.force}
+		self.beacon = self.entity.surface.create_entity{name = "cyber_beacon_100", position = self:get_beacon_placement(), force = self.entity.force}
 	elseif self.speed_50_allowed then
-		self.beacon = self.surface.create_entity{name = "cyber_beacon_50", position = self:get_beacon_placement(), force = self.entity.force}
+		self.beacon = self.entity.surface.create_entity{name = "cyber_beacon_50", position = self:get_beacon_placement(), force = self.entity.force}
 	end
 	
 	if self.beacon and self.beacon.valid then
@@ -415,7 +435,7 @@ function cyberchest.find_assembler(self)
 end
 
 function cyberchest.search_area(self, area)
-	local targets = self.surface.find_entities_filtered({area = area,type = "assembling-machine"})
+	local targets = self.entity.surface.find_entities_filtered({area = area,type = "assembling-machine"})
 	for _,asm in pairs(targets) do
 		if self.is_asm_free(asm) then
 			self:assembler_assign(asm)
