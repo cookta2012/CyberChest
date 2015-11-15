@@ -1,28 +1,16 @@
 require "defines"
 require "script.cyberchest"
 require "script.gui"
-local version = 9.3
+local version = 10
 local forced_reset = false
-
-remote.add_interface("Cyberchest",
-{
-    SetCallSpawn = function(call_spawn)
-		if call_spawn ~= 0 then
-			global.call_spawn = call_spawn
-		end
-    end
-})
-
-
-game.on_init(function()
+script.on_init(function()
 if not global.cyberchests then global.cyberchests = {} end
 global.gui = new_gui()
 global.version = version
-global.chest_index = 1
-global.call_spawn = 20
 end)
 
-game.on_load(function()
+
+script.on_load(function()
 	for _,chest in pairs(global.cyberchests) do
 		setmetatable(chest, cyberchest)
 	end
@@ -35,11 +23,6 @@ game.on_load(function()
 			chest.all_green = false
 		end
 	end
-	if not global.call_spawn then
-		global.call_spawn = 20
-	end
-	 
-	global.chest_index = 1
 	global.gui = new_gui()
 end)
 
@@ -52,28 +35,36 @@ function migrate()
 		end
 	end
 	--add migration for future updates here
-	if global.version < 9.1  then
-		global.version = 9.1
-		for _,chest in pairs(global.cyberchests) do
-			chest.state = chest.ready
-			chest.all_green = false
-		end
-	end
+	--if global.version < 10 then
 end
 
-game.on_event(defines.events.on_built_entity, function(event)
+script.on_event(defines.events.on_built_entity, function(event)
 	if event.created_entity.name == "cyberchest" then
 		table.insert(global.cyberchests, cyberchest:new({entity = event.created_entity, is_asm_free = is_assembler_free}))
 		--game.players[1].print("chest_created")
 	end
 end)
 
-game.on_event(defines.events.on_robot_built_entity, function(event)
+script.on_event(defines.events.on_robot_built_entity, function(event)
 	if event.created_entity.name == "cyberchest" then
 		table.insert(global.cyberchests, cyberchest:new({entity = event.created_entity, is_asm_free = is_assembler_free}))
 		--game.players[1].print("chest_created")
 	end
 end)
+
+
+
+--[[script.on_event(defines.events.onentitydied, function(event)
+	if event.entity.name == "cyberchest" then
+		cyberchest_get_from_entity(entity) = nil
+	end
+end)
+
+script.on_event(defines.events.onentitydied, function(event)
+	if event.entity.name == "cyberchest" then
+		cyberchest_get_from_entity(entity) = nil
+	end
+end)]]
 
 --checks if assembler is occupied by some chest
 function is_assembler_free(assembler)
@@ -94,38 +85,32 @@ function cyberchest_get_from_entity(entity)
 	return nil
 end
 
-game.on_event(defines.events.on_tick, function(event)
-	for	i = global.chest_index, #global.cyberchests, global.call_spawn-1 do
-		chest = global.cyberchests[i]	
-		if chest:is_valid() then
-			chest:state_execute()
-		else	
-			chest:destroy_beacon()
-			chest = nil
-			table.remove(global.cyberchests,i)
-		end
-	end
-	
-	global.chest_index = global.chest_index + 1
-	if global.chest_index >= global.call_spawn then
-		global.chest_index = 1
-	end
-	if event.tick % 20 ~= 0 then return end
-	
-	for i,player in pairs(game.players) do
-		if player.character and player.opened and player.opened.name == 'cyberchest' then
-		    thingOpened = cyberchest_get_from_entity(player.opened)
-			if thingOpened ~= nil then
-			  global.gui.show(i, cyberchest_get_from_entity(player.opened))
+script.on_event(defines.events.on_tick, function(event)
+	ticker()
+	--game.players[1].print(cycles)
+	if event.tick % 20 ~= 0 then
+		for i,player in pairs(game.players) do
+			if player.character and player.opened and player.opened.name == 'cyberchest' then
+				thingOpened = cyberchest_get_from_entity(player.opened)
+				if thingOpened ~= nil then
+					global.gui.show(i, cyberchest_get_from_entity(player.opened))
+				end
+			else
+				global.gui.hide(i)
 			end
-		else
-			global.gui.hide(i)
 		end
 	end
-	
 end)
 
-game.on_event(defines.events.on_gui_click, function(event)
+script.on_event(defines.events.on_gui_click, function(event)
 	global.gui.dispatch(event.player_index, event.element.name)
 end)
 
+function ticker()
+	-- reset index if out of bounds
+	for i,v in ipairs(global.cyberchests) do
+		if not v:on_tick() then
+			table.remove(global.cyberchests, i)
+		end
+	end
+end
