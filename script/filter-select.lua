@@ -1,3 +1,0 @@
-
---require "scripts.cyber-chest"
-
