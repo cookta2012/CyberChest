@@ -1,1 +1,5 @@
 *.rar
+/scratch.lua
+/data-final-fixes.lua
+/current styles.lua
+/current data.raw.lua
