@@ -6,5 +6,5 @@
 	"title":"CyberChest",
 	"homepage":"http://www.factorioforums.com/forum/viewtopic.php?f=14&t=12471",
 	"description":"Chest for complex automated crafting",
-	"dependencies": ["base >= 0.17.0","stdlib >= 1.0.2"]]
+	"dependencies": ["base >= 0.17.0","stdlib >= 1.0.2"]
 }
