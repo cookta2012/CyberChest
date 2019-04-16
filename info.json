@@ -1,9 +1,10 @@
 {
 	"name":"CyberChest",
 	"author":"SigmatroN",
+	"factorio_version": "0.17",
 	"version":"0.10.0",
 	"title":"CyberChest",
 	"homepage":"http://www.factorioforums.com/forum/viewtopic.php?f=14&t=12471",
 	"description":"Chest for complex automated crafting",
-	"dependencies": ["base >= 0.12.11"]
+	"dependencies": ["base >= 0.17.0"]
 }
